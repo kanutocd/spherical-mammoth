@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+coverage/
+tmp/
+log/
+node_modules/
+vendor/bundle/
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.pem
+*.key
