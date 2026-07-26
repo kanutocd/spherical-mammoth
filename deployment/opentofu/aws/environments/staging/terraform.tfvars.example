@@ -1,0 +1,18 @@
+aws_region  = "ap-southeast-1"
+environment = "staging"
+vpc_cidr    = "10.41.0.0/16"
+
+single_nat_gateway          = false
+cluster_public_access       = true
+cluster_public_access_cidrs = ["203.0.113.10/32"]
+cluster_admin_principal_arns = ["arn:aws:iam::123456789012:role/platform-admin"]
+node_instance_types         = ["m7i.large"]
+node_capacity_type          = "ON_DEMAND"
+node_min_size               = 2
+node_desired_size           = 3
+node_max_size               = 8
+
+postgres_instance_class      = "db.m7g.large"
+postgres_multi_az            = true
+postgres_deletion_protection = true
+postgres_skip_final_snapshot = false

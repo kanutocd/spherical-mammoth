@@ -1,0 +1,5 @@
+bucket       = "replace-me-spherical-mammoth-tofu-state"
+key          = "aws/staging/terraform.tfstate"
+region       = "ap-southeast-1"
+encrypt      = true
+use_lockfile = true
