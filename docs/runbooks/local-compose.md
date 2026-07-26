@@ -2,10 +2,21 @@
 
 The Compose stack is the default developer and demonstration environment.
 
-Planned command:
+Start the implemented services:
 
 ```bash
-docker compose --file deployment/compose/compose.yaml up --build
+make compose-up
 ```
 
-The initial scaffold defines service names, networks, volumes, health dependencies, and configuration mounts. Service images are placeholders until Milestone 1 implementations exist.
+Open the web application at `http://localhost:3000` and Mailpit at
+`http://localhost:8025`.
+
+Run the current lifecycle acceptance smoke:
+
+```bash
+make smoke-lifecycle
+```
+
+The smoke currently submits the Mammoth delivery envelope directly to the sink.
+The Mammoth service remains behind the `implemented` Compose profile until its
+version-specific destination and routing configuration is finalized.

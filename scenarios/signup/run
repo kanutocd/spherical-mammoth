@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bridge_url="${BRIDGE_URL:-http://localhost:8081}"
+sink_url="${EMAIL_SINK_URL:-http://localhost:8082}"
+mailpit_url="${MAILPIT_URL:-http://localhost:8025}"
+run_id="$(date +%s)-$$"
+identity_id="scenario-${run_id}"
+email="${identity_id}@spherical-mammoth.test"
+response_file="$(mktemp)"
+trap 'rm -f "$response_file"' EXIT
+
+curl --fail --silent --show-error \
+  --request POST "${bridge_url}/v1/lifecycle/verification-requested" \
+  --header 'Content-Type: application/json' \
+  --data "{\"identity_id\":\"${identity_id}\",\"email\":\"${email}\",\"display_name\":\"Scenario User\"}" \
+  >"$response_file"
+
+event_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["event_id"])' "$response_file")"
+signup_request_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["signup_request_id"])' "$response_file")"
+delivery_id="scenario-delivery-${run_id}"
+before="$(curl --fail --silent --show-error "${mailpit_url}/api/v1/messages" | python3 -c 'import json,sys; print(json.load(sys.stdin)["total"])')"
+
+payload="{\"delivery_id\":\"${delivery_id}\",\"attempt\":1,\"sent_at\":\"2026-07-26T00:00:00Z\",\"event\":{\"event_id\":\"${event_id}\",\"event_type\":\"identity.verification_requested\",\"occurred_at\":\"2026-07-26T00:00:00Z\",\"data\":{\"signup_request_id\":\"${signup_request_id}\",\"identity_id\":\"${identity_id}\",\"email\":\"${email}\",\"display_name\":\"Scenario User\"}}}"
+
+curl --fail --silent --show-error \
+  --request POST "${sink_url}/v1/deliveries" \
+  --header 'Content-Type: application/json' \
+  --data "$payload" >/dev/null
+curl --fail --silent --show-error \
+  --request POST "${sink_url}/v1/deliveries" \
+  --header 'Content-Type: application/json' \
+  --data "$payload" >/dev/null
+
+after="$(curl --fail --silent --show-error "${mailpit_url}/api/v1/messages" | python3 -c 'import json,sys; print(json.load(sys.stdin)["total"])')"
+test "$after" -eq "$((before + 1))"
+echo "signup lifecycle smoke passed: ${event_id}; duplicate delivery suppressed"

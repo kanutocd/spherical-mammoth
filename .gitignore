@@ -21,3 +21,5 @@ crash.log
 
 /.ignoreme/
 /.history/
+__pycache__/
+*.py[cod]
