@@ -47,6 +47,24 @@ kubectl config use-context kind-spherical-mammoth
 kubectl cluster-info
 ```
 
+For a deterministic local run, preload the published application images into
+the kind node. Images in the host Docker cache are not automatically visible to
+kind:
+
+```bash
+export APP_IMAGE_TAG=v1.5.3
+for image in \
+  ghcr.io/kanutocd/spherical-mammoth-identity-lifecycle-bridge:"$APP_IMAGE_TAG" \
+  ghcr.io/kanutocd/spherical-mammoth-email-sink:"$APP_IMAGE_TAG" \
+  ghcr.io/kanutocd/spherical-mammoth-web:"$APP_IMAGE_TAG"
+do
+  docker pull "$image"
+  kind load docker-image "$image" --name spherical-mammoth
+done
+```
+
+If you skip this step, the kind node must pull the images directly from GHCR.
+
 ## Install the published chart
 
 ```bash
