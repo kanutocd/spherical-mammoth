@@ -1,0 +1,3 @@
+Spherical Mammoth chart scaffold installed.
+
+Workload templates will be introduced with Milestone 1 so they correspond to real images, health endpoints, configuration, and persistence requirements.

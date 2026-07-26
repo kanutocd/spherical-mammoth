@@ -1,0 +1,29 @@
+global:
+  environment: development
+
+mammoth:
+  enabled: true
+  image:
+    repository: ghcr.io/kanutocd/mammoth
+    tag: latest
+  replicaCount: 1
+  strategy: Recreate
+  persistence:
+    enabled: true
+    size: 1Gi
+
+mailpit:
+  enabled: true
+
+emailSink:
+  enabled: false
+  provider: mailpit
+
+kratos:
+  enabled: true
+
+hydra:
+  enabled: false
+
+observability:
+  enabled: false
