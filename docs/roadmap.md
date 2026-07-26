@@ -10,14 +10,14 @@
 
 ## Milestone 1 — Signup verification vertical slice
 
-- [ ] React signup and verification UX;
+- [x] React signup and verification UX;
 - [ ] Kratos browser registration and verification flow;
-- [ ] Go identity lifecycle bridge;
-- [ ] application-owned signup projection and semantic events;
+- [x] Go identity lifecycle bridge;
+- [x] application-owned signup projection and semantic events;
 - [ ] Mammoth source and route configuration;
-- [ ] Python email sink;
-- [ ] Mailpit default provider;
-- [ ] verification and welcome templates;
+- [x] Python email sink;
+- [x] Mailpit default provider;
+- [x] verification and welcome templates;
 - [ ] end-to-end Compose scenario.
 
 ## Milestone 2 — Kubernetes parity
