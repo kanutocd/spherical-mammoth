@@ -18,7 +18,7 @@
 - [x] Python email sink;
 - [x] Mailpit default provider;
 - [x] verification and welcome templates;
-- [ ] end-to-end Compose scenario.
+- [x] end-to-end Compose scenario.
 
 ## Milestone 2 — Kubernetes parity
 

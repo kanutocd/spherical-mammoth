@@ -2,7 +2,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose --file deployment/compose/compose.yaml
 HELM_CHART := deployment/helm/spherical-mammoth
 
-.PHONY: validate compose-config compose-up compose-down smoke-lifecycle helm-lint tofu-fmt tofu-validate kind-create kind-delete scaffold-check
+.PHONY: validate compose-config compose-up compose-down e2e-signup smoke-lifecycle helm-lint tofu-fmt tofu-validate kind-create kind-delete scaffold-check
 
 validate: compose-config helm-lint tofu-fmt scaffold-check
 
@@ -15,8 +15,10 @@ compose-up:
 compose-down:
 	$(COMPOSE) down
 
-smoke-lifecycle:
+e2e-signup:
 	./scenarios/signup/run
+
+smoke-lifecycle: e2e-signup
 
 helm-lint:
 	helm lint $(HELM_CHART)

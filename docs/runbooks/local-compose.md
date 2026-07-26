@@ -14,7 +14,7 @@ Open the web application at `http://localhost:3000` and Mailpit at
 Run the current lifecycle acceptance smoke:
 
 ```bash
-make smoke-lifecycle
+make e2e-signup
 ```
 
 The smoke exercises the complete committed-event path through PostgreSQL

@@ -1,28 +1,201 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+kratos_url="${KRATOS_URL:-http://localhost:4433}"
 bridge_url="${BRIDGE_URL:-http://localhost:8081}"
 mailpit_url="${MAILPIT_URL:-http://localhost:8025}"
+web_origin="${WEB_ORIGIN:-http://localhost:3000}"
+timeout_seconds="${E2E_TIMEOUT_SECONDS:-90}"
+
 run_id="$(date +%s)-$$"
-identity_id="scenario-${run_id}"
-email="${identity_id}@spherical-mammoth.test"
-before="$(curl --fail --silent --show-error "${mailpit_url}/api/v1/messages" | python3 -c 'import json,sys; print(json.load(sys.stdin)["total"])')"
+email="scenario-${run_id}@spherical-mammoth.test"
+display_name="Scenario User"
+password="Sph3rical-Mammoth-${run_id}-Valid!"
 
+cookie_file="$(mktemp)"
+registration_flow_file="$(mktemp)"
+registration_result_file="$(mktemp)"
+verification_flow_file="$(mktemp)"
+messages_file="$(mktemp)"
+trap 'rm -f "$cookie_file" "$registration_flow_file" "$registration_result_file" "$verification_flow_file" "$messages_file"' EXIT
+
+json_value() {
+  python3 -c 'import json,sys; value=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {"value": value}))' "$1" "$2"
+}
+
+flow_csrf_token() {
+  python3 -c '
+import json, sys
+flow = json.load(open(sys.argv[1]))
+print(next(
+    node["attributes"]["value"]
+    for node in flow["ui"]["nodes"]
+    if node["attributes"].get("name") == "csrf_token"
+))
+' "$1"
+}
+
+mailpit_refresh() {
+  curl --fail --silent --show-error "${mailpit_url}/api/v1/messages" >"$messages_file"
+}
+
+mailpit_subject_count() {
+  python3 -c '
+import json, sys
+payload = json.load(open(sys.argv[1]))
+email, subject = sys.argv[2], sys.argv[3]
+print(sum(
+    message["Subject"] == subject
+    and any(recipient["Address"] == email for recipient in message["To"])
+    for message in payload["messages"]
+))
+' "$messages_file" "$email" "$1"
+}
+
+mailpit_verification_code() {
+  python3 -c '
+import json, re, sys
+payload = json.load(open(sys.argv[1]))
+email = sys.argv[2]
+for message in payload["messages"]:
+    if (
+        message["Subject"] == "Please verify your email address"
+        and any(recipient["Address"] == email for recipient in message["To"])
+    ):
+        match = re.search(r"\b(\d{6})\b", message.get("Snippet", ""))
+        if match:
+            print(match.group(1))
+            break
+' "$messages_file" "$email"
+}
+
+wait_for_initial_emails() {
+  local deadline=$((SECONDS + timeout_seconds))
+  while (( SECONDS < deadline )); do
+    mailpit_refresh
+    if test "$(mailpit_subject_count "Please verify your email address")" -eq 1 \
+      && test "$(mailpit_subject_count "Verify your Spherical Mammoth account")" -eq 1 \
+      && test -n "$(mailpit_verification_code)"; then
+      return
+    fi
+    sleep 1
+  done
+  echo "timed out waiting for Kratos and Mammoth verification emails" >&2
+  exit 1
+}
+
+wait_for_welcome_email() {
+  local deadline=$((SECONDS + timeout_seconds))
+  while (( SECONDS < deadline )); do
+    mailpit_refresh
+    if test "$(mailpit_subject_count "Welcome to Spherical Mammoth")" -eq 1; then
+      return
+    fi
+    sleep 1
+  done
+  echo "timed out waiting for Mammoth welcome email" >&2
+  exit 1
+}
+
+echo "1/6 initialize Kratos browser registration flow"
 curl --fail --silent --show-error \
-  --request POST "${bridge_url}/v1/lifecycle/verification-requested" \
+  --cookie-jar "$cookie_file" \
+  --header 'Accept: application/json' \
+  --header "Origin: ${web_origin}" \
+  "${kratos_url}/self-service/registration/browser" \
+  >"$registration_flow_file"
+
+registration_action="$(json_value "$registration_flow_file" 'value["ui"]["action"]')"
+registration_csrf="$(flow_csrf_token "$registration_flow_file")"
+registration_payload="$(python3 -c '
+import json, sys
+print(json.dumps({
+    "csrf_token": sys.argv[1],
+    "method": "password",
+    "password": sys.argv[2],
+    "traits": {"email": sys.argv[3], "display_name": sys.argv[4]},
+}))
+' "$registration_csrf" "$password" "$email" "$display_name")"
+
+echo "2/6 register identity through Kratos browser flow"
+curl --fail --silent --show-error \
+  --cookie "$cookie_file" \
+  --cookie-jar "$cookie_file" \
+  --header 'Accept: application/json' \
   --header 'Content-Type: application/json' \
-  --data "{\"identity_id\":\"${identity_id}\",\"email\":\"${email}\",\"display_name\":\"Scenario User\"}" \
+  --header "Origin: ${web_origin}" \
+  --data "$registration_payload" \
+  "$registration_action" \
+  >"$registration_result_file"
+
+identity_id="$(json_value "$registration_result_file" 'value["identity"]["id"]')"
+verification_flow_id="$(json_value "$registration_result_file" 'next(item["flow"]["id"] for item in value["continue_with"] if item["action"] == "show_verification_ui")')"
+
+echo "3/6 commit verification-requested event and await CDC delivery"
+curl --fail --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --data "$(python3 -c '
+import json, sys
+print(json.dumps({
+    "identity_id": sys.argv[1],
+    "email": sys.argv[2],
+    "display_name": sys.argv[3],
+}))
+' "$identity_id" "$email" "$display_name")" \
+  "${bridge_url}/v1/lifecycle/verification-requested" \
   >/dev/null
+wait_for_initial_emails
 
-deadline=$((SECONDS + 30))
-while (( SECONDS < deadline )); do
-  after="$(curl --fail --silent --show-error "${mailpit_url}/api/v1/messages" | python3 -c 'import json,sys; print(json.load(sys.stdin)["total"])')"
-  if test "$after" -eq "$((before + 1))"; then
-    echo "signup lifecycle smoke passed: PostgreSQL -> Mammoth -> email sink -> Mailpit"
-    exit 0
-  fi
-  sleep 1
-done
+echo "4/6 submit Mailpit verification code to Kratos"
+curl --fail --silent --show-error \
+  --cookie "$cookie_file" \
+  --cookie-jar "$cookie_file" \
+  --header 'Accept: application/json' \
+  --header "Origin: ${web_origin}" \
+  "${kratos_url}/self-service/verification/flows?id=${verification_flow_id}" \
+  >"$verification_flow_file"
 
-echo "timed out waiting for Mammoth delivery" >&2
-exit 1
+verification_action="$(json_value "$verification_flow_file" 'value["ui"]["action"]')"
+verification_csrf="$(flow_csrf_token "$verification_flow_file")"
+verification_code="$(mailpit_verification_code)"
+verification_payload="$(python3 -c '
+import json, sys
+print(json.dumps({
+    "csrf_token": sys.argv[1],
+    "method": "code",
+    "code": sys.argv[2],
+}))
+' "$verification_csrf" "$verification_code")"
+
+verification_state="$(
+  curl --fail --silent --show-error \
+    --cookie "$cookie_file" \
+    --cookie-jar "$cookie_file" \
+    --header 'Accept: application/json' \
+    --header 'Content-Type: application/json' \
+    --header "Origin: ${web_origin}" \
+    --data "$verification_payload" \
+    "$verification_action" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])'
+)"
+test "$verification_state" = "passed_challenge"
+
+echo "5/6 commit signup-completed event and await CDC delivery"
+curl --fail --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --data "$(python3 -c '
+import json, sys
+print(json.dumps({
+    "identity_id": sys.argv[1],
+    "email": sys.argv[2],
+    "display_name": sys.argv[3],
+}))
+' "$identity_id" "$email" "$display_name")" \
+  "${bridge_url}/v1/lifecycle/signup-completed" \
+  >/dev/null
+wait_for_welcome_email
+
+echo "6/6 signup Compose scenario passed"
+echo "Kratos browser flow -> PostgreSQL -> Mammoth -> email sink -> Mailpit"

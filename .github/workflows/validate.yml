@@ -16,3 +16,19 @@ jobs:
         run: docker compose version
       - name: Validate repository scaffold
         run: make validate
+
+  compose-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the Compose stack
+        run: docker compose --file deployment/compose/compose.yaml up --detach --build --wait --wait-timeout 180
+      - name: Run signup acceptance scenario
+        run: make e2e-signup
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose --file deployment/compose/compose.yaml logs --no-color
+      - name: Stop the Compose stack
+        if: always()
+        run: docker compose --file deployment/compose/compose.yaml down --volumes
