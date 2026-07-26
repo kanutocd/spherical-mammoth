@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spherical-mammoth.local/contracts/events/identity.signup_completed.v1.schema.json",
+  "title": "Identity Signup Completed v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "occurred_at", "data"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": { "const": "identity.signup_completed" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_id", "identity_id", "email"],
+      "properties": {
+        "account_id": { "type": "string", "minLength": 1 },
+        "identity_id": { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "format": "email" },
+        "display_name": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Spherical Mammoth Email Sink API
+  version: 0.1.0
+paths:
+  /health/live:
+    get:
+      responses:
+        '200':
+          description: Process is alive
+  /health/ready:
+    get:
+      responses:
+        '200':
+          description: Sink is ready to accept deliveries
+  /v1/deliveries:
+    post:
+      summary: Accept a Mammoth event delivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../delivery/mammoth-http-delivery.v1.schema.json
+      responses:
+        '202':
+          description: Delivery accepted or already completed idempotently
+        '400':
+          description: Invalid permanent payload
+        '503':
+          description: Retryable provider or service failure

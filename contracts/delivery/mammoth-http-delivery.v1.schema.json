@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spherical-mammoth.local/contracts/delivery/mammoth-http-delivery.v1.schema.json",
+  "title": "Mammoth HTTP Delivery Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["delivery_id", "event", "attempt", "sent_at"],
+  "properties": {
+    "delivery_id": { "type": "string", "minLength": 1 },
+    "event": { "type": "object" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "source_position": { "type": ["string", "integer", "null"] },
+    "transaction_id": { "type": ["string", "integer", "null"] }
+  }
+}
