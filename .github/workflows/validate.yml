@@ -32,3 +32,22 @@ jobs:
       - name: Stop the Compose stack
         if: always()
         run: docker compose --file deployment/compose/compose.yaml down --volumes
+
+  helm-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: spherical-mammoth
+          config: deployment/kind/cluster.yaml
+      - name: Verify Helm release and signup lifecycle
+        run: make kind-verify
+      - name: Show Kubernetes diagnostics on failure
+        if: failure()
+        run: |
+          kubectl --namespace spherical-mammoth get all
+          kubectl --namespace spherical-mammoth get events --sort-by=.lastTimestamp
+          kubectl --namespace spherical-mammoth logs deployment/spherical-mammoth --tail=200

@@ -5,25 +5,148 @@ mammoth:
   enabled: true
   image:
     repository: ghcr.io/kanutocd/mammoth
-    tag: latest
-  replicaCount: 1
-  strategy: Recreate
+    tag: "v1.5.3"
+    pullPolicy: IfNotPresent
+  mammoth:
+    name: spherical_mammoth
+  node:
+    node_id: spherical-mammoth-kubernetes
+    node_name: spherical-mammoth
+    environment: development
+    labels:
+      deployment: kubernetes
+  postgres:
+    host: spherical-mammoth-postgres
+    port: 5432
+    database: spherical_mammoth
+    username: mammoth
+    existingSecret:
+      name: spherical-mammoth-secrets
+      key: mammoth-postgres-password
+  replication:
+    slot: spherical_mammoth
+    publications:
+      - spherical_mammoth_publication
+    auto_create_slot: true
+    temporary_slot: false
+    feedback_interval: 2.0
+  delivery:
+    unit: event
+    ordering:
+      scope: global
+  runtime:
+    adapter: concurrent
+    concurrency: 1
+    batch_size: 1
+    preserve_order: true
+    timeout_seconds: 15
+  destinations:
+    - name: transactional_email
+      type: webhook
+      enabled: true
+      url: http://spherical-mammoth-email-sink:8080/v1/deliveries
+      timeout_seconds: 10
+      route:
+        schemas: [public]
+        tables: [domain_events]
+        operations: [insert]
+      signing:
+        algorithm: hmac_sha256
+        secret_env: MAMMOTH_WEBHOOK_SIGNING_SECRET
+        signature_header: X-Mammoth-Signature
+        timestamp_header: X-Mammoth-Timestamp
+      existingSecret:
+        name: spherical-mammoth-secrets
+        keys:
+          MAMMOTH_WEBHOOK_SIGNING_SECRET: webhook-signing-secret
+      retry:
+        max_attempts: 8
+        schedule_seconds: [1, 2, 5, 10, 30]
+  retry:
+    max_attempts: 5
+    schedule_seconds: [1, 5, 30]
+  persistence:
+    storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+secrets:
+  postgresPassword: spherical_mammoth
+  mammothPostgresPassword: development-only
+  webhookSigningSecret: development-only-signing-secret
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "17"
+    pullPolicy: IfNotPresent
   persistence:
     enabled: true
-    size: 1Gi
-
-mailpit:
-  enabled: true
-
-emailSink:
-  enabled: false
-  provider: mailpit
+    size: 2Gi
+  resources: {}
 
 kratos:
   enabled: true
+  image:
+    repository: oryd/kratos
+    tag: "v1.3.1"
+    pullPolicy: IfNotPresent
+  publicUrl: http://localhost:4433
+  browserUrl: http://localhost:8080
+  persistence:
+    enabled: false
+  resources: {}
 
 hydra:
   enabled: false
+
+mailpit:
+  enabled: true
+  image:
+    repository: axllent/mailpit
+    tag: latest
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources: {}
+
+identityLifecycleBridge:
+  enabled: true
+  image:
+    repository: ghcr.io/kanutocd/spherical-mammoth-identity-lifecycle-bridge
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  corsAllowedOrigin: http://localhost:8080
+  resources: {}
+
+emailSink:
+  enabled: true
+  image:
+    repository: ghcr.io/kanutocd/spherical-mammoth-email-sink
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources: {}
+
+web:
+  enabled: true
+  image:
+    repository: ghcr.io/kanutocd/spherical-mammoth-web
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  resources: {}
+
+service:
+  type: ClusterIP
 
 observability:
   enabled: false

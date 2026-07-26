@@ -1,0 +1,32 @@
+name: Publish Helm chart
+
+on:
+  push:
+    tags:
+      - "chart-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+      - name: Verify tag matches chart version
+        shell: bash
+        run: |
+          chart_version="$(helm show chart deployment/helm/spherical-mammoth | awk '$1 == "version:" { print $2 }')"
+          test "${GITHUB_REF_NAME}" = "chart-v${chart_version}"
+      - name: Resolve dependencies
+        run: helm dependency build deployment/helm/spherical-mammoth
+      - name: Lint and package
+        run: |
+          helm lint deployment/helm/spherical-mammoth
+          helm package deployment/helm/spherical-mammoth --destination dist
+      - name: Publish to GHCR
+        run: helm push "dist/spherical-mammoth-${GITHUB_REF_NAME#chart-v}.tgz" oci://ghcr.io/kanutocd/charts

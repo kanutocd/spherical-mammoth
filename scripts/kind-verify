@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cluster_name="${KIND_CLUSTER_NAME:-spherical-mammoth}"
+release_name="${HELM_RELEASE_NAME:-spherical-mammoth}"
+namespace="${HELM_NAMESPACE:-spherical-mammoth}"
+chart_dir="deployment/helm/spherical-mammoth"
+values_file="$chart_dir/values-kind.yaml"
+mammoth_image="${MAMMOTH_IMAGE:-ghcr.io/kanutocd/mammoth:v1.5.3}"
+
+forward_pids=()
+cleanup() {
+  for pid in "${forward_pids[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT
+
+if ! kind get clusters | grep -qx "$cluster_name"; then
+  kind create cluster --config deployment/kind/cluster.yaml
+fi
+
+kind export kubeconfig --name "$cluster_name"
+kubectl taint nodes --all node-role.kubernetes.io/control-plane- >/dev/null 2>&1 || true
+
+./scripts/helm-dependency-local "$chart_dir"
+
+docker build \
+  --tag spherical-mammoth/identity-lifecycle-bridge:local \
+  services/identity-lifecycle-bridge
+docker build \
+  --tag spherical-mammoth/email-sink:local \
+  services/email-sink
+docker build \
+  --build-arg VITE_KRATOS_PUBLIC_URL=http://localhost:14433 \
+  --build-arg VITE_BRIDGE_URL=http://localhost:18081 \
+  --tag spherical-mammoth/web:local \
+  apps/web
+
+if ! docker image inspect "$mammoth_image" >/dev/null 2>&1; then
+  docker pull "$mammoth_image"
+fi
+
+kind load docker-image --name "$cluster_name" \
+  spherical-mammoth/identity-lifecycle-bridge:local \
+  spherical-mammoth/email-sink:local \
+  spherical-mammoth/web:local \
+  "$mammoth_image"
+
+helm upgrade --install "$release_name" "$chart_dir" \
+  --namespace "$namespace" \
+  --create-namespace \
+  --values "$values_file" \
+  --wait \
+  --timeout 5m
+
+kubectl --namespace "$namespace" rollout status statefulset/"$release_name-postgres" --timeout=3m
+kubectl --namespace "$namespace" rollout status deployment/"$release_name-kratos" --timeout=3m
+kubectl --namespace "$namespace" rollout status deployment/"$release_name-identity-lifecycle-bridge" --timeout=3m
+kubectl --namespace "$namespace" rollout status deployment/"$release_name-email-sink" --timeout=3m
+kubectl --namespace "$namespace" rollout status deployment/"$release_name-web" --timeout=3m
+kubectl --namespace "$namespace" rollout status deployment/"$release_name" --timeout=3m
+
+kubectl --namespace "$namespace" port-forward service/"$release_name-kratos" 14433:4433 >/tmp/spherical-mammoth-kratos-forward.log 2>&1 &
+forward_pids+=("$!")
+kubectl --namespace "$namespace" port-forward service/"$release_name-identity-lifecycle-bridge" 18081:8080 >/tmp/spherical-mammoth-bridge-forward.log 2>&1 &
+forward_pids+=("$!")
+kubectl --namespace "$namespace" port-forward service/"$release_name-mailpit" 18025:8025 >/tmp/spherical-mammoth-mailpit-forward.log 2>&1 &
+forward_pids+=("$!")
+kubectl --namespace "$namespace" port-forward service/"$release_name-web" 18080:80 >/tmp/spherical-mammoth-web-forward.log 2>&1 &
+forward_pids+=("$!")
+
+for url in \
+  http://localhost:14433/health/ready \
+  http://localhost:18081/health/ready \
+  http://localhost:18025/api/v1/info \
+  http://localhost:18080/; do
+  for _ in {1..30}; do
+    curl --fail --silent "$url" >/dev/null && break
+    sleep 1
+  done
+  curl --fail --silent "$url" >/dev/null
+done
+
+KRATOS_URL=http://localhost:14433 \
+BRIDGE_URL=http://localhost:18081 \
+MAILPIT_URL=http://localhost:18025 \
+WEB_ORIGIN=http://localhost:18080 \
+./scenarios/signup/run
+
+echo "Spherical Mammoth Helm release passed on kind."

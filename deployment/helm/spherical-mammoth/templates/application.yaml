@@ -1,0 +1,193 @@
+{{- if .Values.identityLifecycleBridge.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-identity-lifecycle-bridge
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "identity-lifecycle-bridge") | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: identity-lifecycle-bridge
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-identity-lifecycle-bridge
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "identity-lifecycle-bridge") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: identity-lifecycle-bridge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: identity-lifecycle-bridge
+    spec:
+      containers:
+        - name: bridge
+          image: "{{ .Values.identityLifecycleBridge.image.repository }}:{{ .Values.identityLifecycleBridge.image.tag }}"
+          imagePullPolicy: {{ .Values.identityLifecycleBridge.image.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: postgres://spherical_mammoth:{{ .Values.secrets.postgresPassword }}@{{ include "spherical-mammoth.fullname" . }}-postgres:5432/spherical_mammoth
+            - name: CORS_ALLOWED_ORIGIN
+              value: {{ .Values.identityLifecycleBridge.corsAllowedOrigin | quote }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.identityLifecycleBridge.resources | nindent 12 }}
+{{- end }}
+{{- if .Values.emailSink.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-email-sink
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "email-sink") | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: email-sink
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-email-sink
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "email-sink") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: email-sink
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: email-sink
+    spec:
+      containers:
+        - name: email-sink
+          image: "{{ .Values.emailSink.image.repository }}:{{ .Values.emailSink.image.tag }}"
+          imagePullPolicy: {{ .Values.emailSink.image.pullPolicy }}
+          env:
+            - name: EMAIL_SINK_DB_PATH
+              value: /data/email-sink.db
+            - name: EMAIL_FROM_ADDRESS
+              value: no-reply@spherical-mammoth.test
+            - name: MAILPIT_SMTP_HOST
+              value: {{ include "spherical-mammoth.fullname" . }}-mailpit
+            - name: MAILPIT_SMTP_PORT
+              value: "1025"
+            - name: DELIVERY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spherical-mammoth.fullname" . }}-secrets
+                  key: webhook-signing-secret
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.emailSink.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.emailSink.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "spherical-mammoth.fullname" . }}-email-sink
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- if .Values.emailSink.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-email-sink
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "email-sink") | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.emailSink.persistence.size }}
+{{- end }}
+{{- end }}
+{{- if .Values.web.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-web
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "web") | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-web
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "web") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+{{- end }}

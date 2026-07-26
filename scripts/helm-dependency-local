@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+chart_dir="${1:-deployment/helm/spherical-mammoth}"
+mammoth_chart="${MAMMOTH_CHART_DIR:-../mammoth/charts/mammoth}"
+
+if [[ ! -f "$mammoth_chart/Chart.yaml" ]]; then
+  if compgen -G "$chart_dir/charts/mammoth-*.tgz" >/dev/null; then
+    echo "Using vendored Mammoth chart dependency."
+    exit 0
+  fi
+  echo "Mammoth chart not found at $mammoth_chart" >&2
+  echo "Set MAMMOTH_CHART_DIR or run 'helm dependency build $chart_dir' against the published OCI chart." >&2
+  exit 1
+fi
+
+mkdir -p "$chart_dir/charts"
+helm package "$mammoth_chart" --destination "$chart_dir/charts"

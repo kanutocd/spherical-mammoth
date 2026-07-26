@@ -1,3 +1,9 @@
-Spherical Mammoth chart scaffold installed.
+Spherical Mammoth is installed in namespace {{ .Release.Namespace }}.
 
-Workload templates will be introduced with Milestone 1 so they correspond to real images, health endpoints, configuration, and persistence requirements.
+Check workload readiness:
+
+  kubectl --namespace {{ .Release.Namespace }} get pods
+
+For local access, follow docs/runbooks/local-kubernetes.md or run:
+
+  make kind-verify

@@ -1,0 +1,47 @@
+global:
+  environment: development
+
+mammoth:
+  image:
+    repository: ghcr.io/kanutocd/mammoth
+    tag: "v1.5.3"
+    pullPolicy: Never
+  persistence:
+    storage: 256Mi
+
+postgres:
+  image:
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: false
+
+kratos:
+  publicUrl: http://localhost:14433
+  browserUrl: http://localhost:18080
+  image:
+    pullPolicy: IfNotPresent
+
+mailpit:
+  persistence:
+    enabled: false
+
+identityLifecycleBridge:
+  image:
+    repository: spherical-mammoth/identity-lifecycle-bridge
+    tag: local
+    pullPolicy: Never
+  corsAllowedOrigin: http://localhost:18080
+
+emailSink:
+  image:
+    repository: spherical-mammoth/email-sink
+    tag: local
+    pullPolicy: Never
+  persistence:
+    enabled: false
+
+web:
+  image:
+    repository: spherical-mammoth/web
+    tag: local
+    pullPolicy: Never

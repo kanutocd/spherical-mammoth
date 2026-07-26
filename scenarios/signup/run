@@ -197,5 +197,5 @@ print(json.dumps({
   >/dev/null
 wait_for_welcome_email
 
-echo "6/6 signup Compose scenario passed"
+echo "6/6 signup scenario passed"
 echo "Kratos browser flow -> PostgreSQL -> Mammoth -> email sink -> Mailpit"

@@ -4,3 +4,8 @@ description: Production-shaped SaaS reference environment for the Mammoth data p
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+dependencies:
+  - name: mammoth
+    version: "1.5.3"
+    repository: "oci://ghcr.io/kanutocd/charts"
+    condition: mammoth.enabled

@@ -1,0 +1,6 @@
+dependencies:
+- name: mammoth
+  repository: oci://ghcr.io/kanutocd/charts
+  version: 1.5.3
+digest: sha256:0c3342c1841b872d58d83bc2c0dc18cc41a6a9827a6f2482e2a0eef3810137ea
+generated: "2026-07-26T17:01:07.668198629+08:00"

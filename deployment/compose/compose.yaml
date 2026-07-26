@@ -61,7 +61,7 @@ services:
     networks: [identity, data, application]
 
   mammoth-init:
-    image: ghcr.io/kanutocd/mammoth:v1.5.1
+    image: ghcr.io/kanutocd/mammoth:v1.5.3
     environment:
       MAMMOTH_POSTGRES_PASSWORD: ${MAMMOTH_POSTGRES_PASSWORD:-development-only}
       MAMMOTH_WEBHOOK_SIGNING_SECRET: ${MAMMOTH_WEBHOOK_SIGNING_SECRET:-development-only-signing-secret}
@@ -78,7 +78,7 @@ services:
     networks: [data, application]
 
   mammoth:
-    image: ghcr.io/kanutocd/mammoth:v1.5.1
+    image: ghcr.io/kanutocd/mammoth:v1.5.3
     environment:
       MAMMOTH_POSTGRES_PASSWORD: ${MAMMOTH_POSTGRES_PASSWORD:-development-only}
       MAMMOTH_WEBHOOK_SIGNING_SECRET: ${MAMMOTH_WEBHOOK_SIGNING_SECRET:-development-only-signing-secret}

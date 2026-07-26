@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/mammoth/v1.5.1/config/mammoth.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kanutocd/mammoth/v1.5.3/config/mammoth.schema.json
 
 mammoth:
   name: spherical_mammoth_local

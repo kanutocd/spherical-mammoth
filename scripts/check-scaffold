@@ -32,7 +32,7 @@ email_sink = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(email_sink)
 
 fixture_path = Path(
-    'contracts/delivery/fixtures/domain-event-insert.mammoth-v1.5.1.json'
+    'contracts/delivery/fixtures/domain-event-insert.mammoth-v1.5.3.json'
 )
 delivery_id, attempt, event = email_sink.normalize_delivery(
     json.loads(fixture_path.read_text())

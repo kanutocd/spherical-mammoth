@@ -22,10 +22,10 @@
 
 ## Milestone 2 — Kubernetes parity
 
-- [ ] build service images;
-- [ ] deploy the vertical slice to kind;
+- [x] build service images;
+- [x] deploy the vertical slice to kind;
 - [ ] add readiness, liveness, resources, persistence, and network policy;
-- [ ] run the same signup scenario against Kubernetes.
+- [x] run the same signup scenario against Kubernetes.
 
 ## Milestone 3 — Reliability demonstrations
 

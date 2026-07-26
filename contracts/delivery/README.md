@@ -5,7 +5,7 @@ sinks. They are consumer-owned compatibility contracts, not canonical Mammoth
 transport schemas.
 
 `email-sink-mammoth-event.v1.schema.json` represents the row-level webhook
-subset consumed from Mammoth v1.5.1. Its compatibility fixture is based on that
+subset consumed from Mammoth v1.5.3. Its compatibility fixture is based on that
 release's documented serializer contract and is exercised by
 `scripts/check-scaffold`.
 

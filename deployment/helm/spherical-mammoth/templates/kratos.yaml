@@ -1,0 +1,71 @@
+{{- if .Values.kratos.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-kratos
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "kratos") | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: kratos
+  ports:
+    - name: public
+      port: 4433
+      targetPort: public
+    - name: admin
+      port: 4434
+      targetPort: admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spherical-mammoth.fullname" . }}-kratos
+  labels:
+    {{- include "spherical-mammoth.componentLabels" (dict "root" . "component" "kratos") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: kratos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: kratos
+    spec:
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.kratos.image.repository }}:{{ .Values.kratos.image.tag }}"
+          imagePullPolicy: {{ .Values.kratos.image.pullPolicy }}
+          args: [migrate, sql, -e, --yes, --config, /etc/config/kratos/kratos.yml]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config/kratos
+      containers:
+        - name: kratos
+          image: "{{ .Values.kratos.image.repository }}:{{ .Values.kratos.image.tag }}"
+          imagePullPolicy: {{ .Values.kratos.image.pullPolicy }}
+          args: [serve, --config, /etc/config/kratos/kratos.yml, --dev, --watch-courier]
+          ports:
+            - name: public
+              containerPort: 4433
+            - name: admin
+              containerPort: 4434
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: admin
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config/kratos
+          resources:
+            {{- toYaml .Values.kratos.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "spherical-mammoth.fullname" . }}-kratos
+{{- end }}
