@@ -66,7 +66,7 @@ SaaS API             Identity Lifecycle Bridge (Go)
 
 Cross-language integration uses:
 
-- JSON Schema for semantic events and Mammoth delivery envelopes;
+- JSON Schema for semantic events and sink-accepted Mammoth CDC payloads;
 - OpenAPI for synchronous service APIs;
 - PostgreSQL constraints for authoritative write-side consistency;
 - HTTP for initial sink delivery.

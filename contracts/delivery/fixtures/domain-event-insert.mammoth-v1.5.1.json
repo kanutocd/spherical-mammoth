@@ -1,0 +1,32 @@
+{
+  "event_id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "source": "pgoutput",
+  "operation": "insert",
+  "namespace": "public",
+  "entity": "domain_events",
+  "identity": {
+    "event_id": "6f5599a0-5a73-40df-9250-cdb2183831e2"
+  },
+  "source_position": "0/1990620",
+  "transaction_id": 765,
+  "occurred_at": "2026-07-26T04:27:05Z",
+  "data": {
+    "event_id": "6f5599a0-5a73-40df-9250-cdb2183831e2",
+    "event_type": "identity.verification_requested",
+    "aggregate_id": "a4e521ef-b1bf-4a70-b2bd-ae61a55bdb92",
+    "occurred_at": "2026-07-26T04:27:05Z",
+    "data": {
+      "signup_request_id": "a4e521ef-b1bf-4a70-b2bd-ae61a55bdb92",
+      "identity_id": "kratos-identity-id",
+      "email": "fixture@spherical-mammoth.test",
+      "display_name": "Fixture User",
+      "verification_url": null
+    }
+  },
+  "changes": [],
+  "metadata": {
+    "source": "pgoutput",
+    "relation_id": 16386,
+    "pgoutput_event": "Insert"
+  }
+}

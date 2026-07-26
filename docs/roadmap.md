@@ -14,7 +14,7 @@
 - [x] Kratos browser registration and verification flow;
 - [x] Go identity lifecycle bridge;
 - [x] application-owned signup projection and semantic events;
-- [ ] Mammoth source and route configuration;
+- [x] Mammoth source and route configuration;
 - [x] Python email sink;
 - [x] Mailpit default provider;
 - [x] verification and welcome templates;

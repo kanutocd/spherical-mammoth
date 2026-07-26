@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://spherical-mammoth.local/contracts/delivery/mammoth-cdc-event.v1.schema.json",
-  "title": "Mammoth CDC Row Event v1",
+  "$id": "https://spherical-mammoth.local/contracts/delivery/email-sink-mammoth-event.v1.schema.json",
+  "title": "Email Sink Accepted Mammoth Event v1",
+  "description": "The subset of Mammoth v1.5.1 row-level webhook events accepted by the Spherical Mammoth email sink.",
   "type": "object",
   "additionalProperties": true,
   "required": [

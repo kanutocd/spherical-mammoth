@@ -6,7 +6,7 @@ required=(
   docs/architecture/overview.md
   contracts/events/identity.verification_requested.v1.schema.json
   contracts/events/identity.signup_completed.v1.schema.json
-  contracts/delivery/mammoth-http-delivery.v1.schema.json
+  contracts/delivery/email-sink-mammoth-event.v1.schema.json
   deployment/compose/compose.yaml
   deployment/helm/spherical-mammoth/Chart.yaml
   deployment/opentofu/aws/versions.tf
@@ -17,9 +17,30 @@ for path in "${required[@]}"; do
 done
 
 python3 - <<'PY'
+import importlib.util
 import json
 from pathlib import Path
+
 for path in Path('contracts').rglob('*.json'):
     json.loads(path.read_text())
+
+spec = importlib.util.spec_from_file_location(
+    'email_sink',
+    Path('services/email-sink/app.py'),
+)
+email_sink = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(email_sink)
+
+fixture_path = Path(
+    'contracts/delivery/fixtures/domain-event-insert.mammoth-v1.5.1.json'
+)
+delivery_id, attempt, event = email_sink.normalize_delivery(
+    json.loads(fixture_path.read_text())
+)
+assert delivery_id.startswith('evt_')
+assert attempt == 1
+assert event['event_type'] == 'identity.verification_requested'
+assert event['data']['email'] == 'fixture@spherical-mammoth.test'
+
 print('scaffold validation passed')
 PY

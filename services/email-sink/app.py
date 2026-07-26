@@ -185,13 +185,6 @@ def normalize_delivery(payload):
     if not isinstance(payload, dict):
         raise ValueError("delivery must be a JSON object")
 
-    if "delivery_id" in payload:
-        delivery_id = required_string(payload, "delivery_id")
-        attempt = payload["attempt"]
-        if not isinstance(attempt, int) or attempt < 1:
-            raise ValueError("attempt must be a positive integer")
-        return delivery_id, attempt, payload["event"]
-
     delivery_id = required_string(payload, "event_id")
     if payload.get("namespace") != "public" or payload.get("entity") != "domain_events":
         raise ValueError("unsupported CDC relation")

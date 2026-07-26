@@ -33,9 +33,7 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - $ref: ../delivery/mammoth-cdc-event.v1.schema.json
-                - $ref: ../delivery/mammoth-http-delivery.v1.schema.json
+              $ref: ../delivery/email-sink-mammoth-event.v1.schema.json
       responses:
         '202':
           description: Delivery accepted or already completed idempotently
