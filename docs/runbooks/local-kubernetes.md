@@ -12,6 +12,7 @@ is required.
 - kubectl
 - Helm 3
 - network access to `ghcr.io`
+- the `spherical-mammoth:0.1.1` chart and `v1.5.3` application images published to GHCR
 
 ## Set the release variables
 
@@ -23,6 +24,13 @@ export HELM_RELEASE=spherical-mammoth
 export HELM_NAMESPACE=spherical-mammoth
 export SPHERICAL_MAMMOTH_CHART_VERSION=0.1.1
 export CHART_REF=oci://ghcr.io/kanutocd/charts/spherical-mammoth
+```
+
+Check the exact chart before creating a cluster. This catches a missing or
+incorrectly tagged OCI release immediately:
+
+```bash
+helm show chart "$CHART_REF" --version "$SPHERICAL_MAMMOTH_CHART_VERSION"
 ```
 
 ## Create a disposable cluster
