@@ -25,12 +25,6 @@ export SPHERICAL_MAMMOTH_CHART_VERSION=0.1.0
 export CHART_REF=oci://ghcr.io/kanutocd/charts/spherical-mammoth
 ```
 
-If the GHCR package is private, authenticate before pulling it:
-
-```bash
-helm registry login ghcr.io
-```
-
 ## Create a disposable cluster
 
 ```bash
