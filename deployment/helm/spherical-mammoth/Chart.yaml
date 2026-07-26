@@ -2,8 +2,8 @@ apiVersion: v2
 name: spherical-mammoth
 description: Production-shaped SaaS reference environment for the Mammoth data plane
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "1.5.3"
 dependencies:
   - name: mammoth
     version: "1.5.3"

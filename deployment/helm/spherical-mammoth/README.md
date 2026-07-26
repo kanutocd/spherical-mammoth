@@ -8,7 +8,7 @@ the canonical Mammoth chart as a versioned dependency.
 ```bash
 helm install spherical-mammoth \
   oci://ghcr.io/kanutocd/charts/spherical-mammoth \
-  --version 0.1.0 \
+  --version 0.1.1 \
   --namespace spherical-mammoth \
   --create-namespace
 ```

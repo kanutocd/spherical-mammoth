@@ -21,7 +21,7 @@ chart versions explicitly so the verification is reproducible:
 ```bash
 export HELM_RELEASE=spherical-mammoth
 export HELM_NAMESPACE=spherical-mammoth
-export SPHERICAL_MAMMOTH_CHART_VERSION=0.1.0
+export SPHERICAL_MAMMOTH_CHART_VERSION=0.1.1
 export CHART_REF=oci://ghcr.io/kanutocd/charts/spherical-mammoth
 ```
 
