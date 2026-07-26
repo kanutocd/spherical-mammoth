@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+region="${AWS_REGION:?set AWS_REGION}"
+bucket="${DEPLOYMENT_BUCKET:?set DEPLOYMENT_BUCKET}"
+endpoint_id="${EICE_ENDPOINT_ID:?set EICE_ENDPOINT_ID}"
+asg_name="${ASG_NAME:?set ASG_NAME}"
+chart_dir="${1:?usage: deploy-chart-through-eice CHART_DIR VALUES_FILE}"
+values_file="${2:?usage: deploy-chart-through-eice CHART_DIR VALUES_FILE [IMAGES_TAR_ZST]}"
+images_archive="${3:-}"
+release_id="${RELEASE_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
+work_dir="$(mktemp -d)"
+ssh_key="$work_dir/operator"
+trap 'rm -rf "$work_dir"' EXIT
+
+helm package "$chart_dir" --destination "$work_dir"
+chart_package="$(find "$work_dir" -maxdepth 1 -name '*.tgz' -print -quit)"
+helm template spherical-mammoth "$chart_package" --values "$values_file" >"$work_dir/rendered.yaml"
+if [[ ! -s "$work_dir/rendered.yaml" ]]; then
+  echo "chart rendered no Kubernetes resources; deployment is gated" >&2
+  exit 1
+fi
+
+aws s3 cp "$chart_package" "s3://$bucket/charts/$release_id/spherical-mammoth.tgz"
+aws s3 cp "$values_file" "s3://$bucket/charts/$release_id/values.yaml"
+if [[ -n "$images_archive" ]]; then
+  aws s3 cp "$images_archive" "s3://$bucket/charts/$release_id/images.tar.zst"
+fi
+
+instance_id="$(aws ec2 describe-instances \
+  --region "$region" \
+  --filters "Name=tag:aws:autoscaling:groupName,Values=$asg_name" "Name=instance-state-name,Values=running" \
+  --query 'Reservations[0].Instances[0].InstanceId' \
+  --output text)"
+availability_zone="$(aws ec2 describe-instances \
+  --region "$region" \
+  --instance-ids "$instance_id" \
+  --query 'Reservations[0].Instances[0].Placement.AvailabilityZone' \
+  --output text)"
+
+ssh-keygen -q -t ed25519 -N "" -f "$ssh_key"
+aws ec2-instance-connect send-ssh-public-key \
+  --region "$region" \
+  --instance-id "$instance_id" \
+  --availability-zone "$availability_zone" \
+  --instance-os-user ec2-user \
+  --ssh-public-key "file://$ssh_key.pub" >/dev/null
+
+proxy_command="aws ec2-instance-connect open-tunnel --region $region --instance-connect-endpoint-id $endpoint_id --instance-id %h"
+ssh -i "$ssh_key" -o "ProxyCommand=$proxy_command" -o StrictHostKeyChecking=accept-new \
+  "ec2-user@$instance_id" \
+  "sudo /usr/local/bin/deploy-k3s-chart '$bucket' '$release_id' mammoth"

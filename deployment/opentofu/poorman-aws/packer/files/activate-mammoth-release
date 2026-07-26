@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bucket="${1:?bucket is required}"
+release_id="${2:?release id is required}"
+mount_path="/srv/mammoth"
+release_path="$mount_path/releases/$release_id"
+source_uri="s3://$bucket/deployments/$release_id"
+
+install -d -m 0770 -o root -g docker "$release_path"
+aws s3 cp "$source_uri/compose.yaml" "$release_path/compose.yaml"
+
+if aws s3api head-object --bucket "$bucket" --key "deployments/$release_id/runtime.env" >/dev/null 2>&1; then
+  aws s3 cp "$source_uri/runtime.env" "$release_path/runtime.env"
+  chmod 0600 "$release_path/runtime.env"
+fi
+
+if aws s3api head-object --bucket "$bucket" --key "deployments/$release_id/image.tar.zst" >/dev/null 2>&1; then
+  aws s3 cp "$source_uri/image.tar.zst" - | zstd -d | docker load
+fi
+
+ln -sfn "$release_path" "$mount_path/current.next"
+mv -Tf "$mount_path/current.next" "$mount_path/current"
+systemctl restart mammoth-compose.service
+docker compose -f "$mount_path/current/compose.yaml" ps

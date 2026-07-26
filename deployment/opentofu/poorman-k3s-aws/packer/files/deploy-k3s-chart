@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bucket="${1:?bucket is required}"
+release_id="${2:?release id is required}"
+namespace="${3:-mammoth}"
+source_uri="s3://$bucket/charts/$release_id"
+release_path="/srv/mammoth/charts/$release_id"
+
+install -d -m 0750 "$release_path"
+aws s3 cp "$source_uri/spherical-mammoth.tgz" "$release_path/spherical-mammoth.tgz"
+aws s3 cp "$source_uri/values.yaml" "$release_path/values.yaml"
+
+if aws s3api head-object --bucket "$bucket" --key "charts/$release_id/images.tar.zst" >/dev/null 2>&1; then
+  aws s3 cp "$source_uri/images.tar.zst" - | zstd -d | k3s ctr images import -
+fi
+
+rendered="$(mktemp)"
+trap 'rm -f "$rendered"' EXIT
+KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
+  helm template spherical-mammoth "$release_path/spherical-mammoth.tgz" \
+  --namespace "$namespace" \
+  --values "$release_path/values.yaml" >"$rendered"
+
+if [[ ! -s "$rendered" ]]; then
+  echo "chart rendered no Kubernetes resources; refusing an empty release" >&2
+  exit 1
+fi
+
+KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
+  helm upgrade --install spherical-mammoth "$release_path/spherical-mammoth.tgz" \
+  --namespace "$namespace" \
+  --create-namespace \
+  --values "$release_path/values.yaml" \
+  --atomic \
+  --timeout 10m \
+  --wait

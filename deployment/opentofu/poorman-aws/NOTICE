@@ -1,0 +1,9 @@
+Hungry Dev AWS Infrastructure
+
+Copyright 2026 Kenneth C. Demanawa
+
+Original architecture and implementation:
+https://github.com/kanutocd/spherical-mammoth
+
+This distribution includes the Golden Mammoth, EBS Ballerina,
+sealed-network deployment, and Poor Man's AWS architecture.

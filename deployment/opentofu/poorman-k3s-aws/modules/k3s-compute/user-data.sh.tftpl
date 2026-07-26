@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device="${data_device_path}"
+fallback_device="${data_device_name}"
+mount_path="${data_mount_path}"
+
+for _ in $(seq 1 180); do
+  [[ -e "$device" ]] && break
+  if [[ -b "$fallback_device" ]]; then
+    device="$fallback_device"
+    break
+  fi
+  sleep 2
+done
+
+if [[ ! -e "$device" && ! -b "$device" ]]; then
+  echo "persistent EBS device did not appear" >&2
+  exit 1
+fi
+
+mkdir -p "$mount_path"
+if ! blkid "$device" >/dev/null 2>&1; then
+  mkfs.xfs -f "$device"
+fi
+
+uuid=$(blkid -s UUID -o value "$device")
+grep -q "UUID=$uuid " /etc/fstab || echo "UUID=$uuid $mount_path xfs defaults,nofail 0 2" >>/etc/fstab
+mount "$mount_path"
+
+install -d -m 0700 "$mount_path/k3s"
+install -d -m 0755 "$mount_path/k3s/agent/images"
+install -d -m 0750 "$mount_path/backups" "$mount_path/charts"
+
+cp -n /opt/k3s/*.tar.zst "$mount_path/k3s/agent/images/"
+touch "$mount_path/k3s/agent/images/.cache.json"
+
+install -d -m 0755 /etc/rancher/k3s
+cat >/etc/rancher/k3s/config.yaml <<CONFIG
+data-dir: $mount_path/k3s
+write-kubeconfig-mode: "0640"
+node-name: golden-mammoth
+secrets-encryption: true
+disable:
+  - servicelb
+CONFIG
+
+cat >/etc/systemd/system/k3s-sealed-route.service <<UNIT
+[Unit]
+Description=Default dummy route required by air-gapped K3s
+Before=k3s.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/sbin/ip link add k3s-dummy type dummy
+ExecStart=/usr/sbin/ip link set k3s-dummy up
+ExecStart=-/usr/sbin/ip route add default dev k3s-dummy metric 42760
+ExecStop=-/usr/sbin/ip route del default dev k3s-dummy metric 42760
+ExecStop=-/usr/sbin/ip link delete k3s-dummy
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now k3s-sealed-route.service
+systemctl enable --now k3s.service
+
+timeout 300 sh -c 'until k3s kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 3; done'

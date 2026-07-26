@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+region="${AWS_REGION:?set AWS_REGION}"
+bucket="${DEPLOYMENT_BUCKET:?set DEPLOYMENT_BUCKET}"
+endpoint_id="${EICE_ENDPOINT_ID:?set EICE_ENDPOINT_ID}"
+asg_name="${ASG_NAME:?set ASG_NAME}"
+artifact="${1:?usage: deploy-through-eice IMAGE_TAR_ZST COMPOSE_FILE [ENV_FILE]}"
+compose_file="${2:?usage: deploy-through-eice IMAGE_TAR_ZST COMPOSE_FILE [ENV_FILE]}"
+env_file="${3:-}"
+release_id="${RELEASE_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
+ssh_key="$(mktemp)"
+
+cleanup() {
+  rm -f "$ssh_key" "$ssh_key.pub"
+}
+trap cleanup EXIT
+
+ssh-keygen -q -t ed25519 -N "" -f "$ssh_key"
+
+instance_id="$(
+  aws ec2 describe-instances \
+    --region "$region" \
+    --filters \
+      "Name=tag:aws:autoscaling:groupName,Values=$asg_name" \
+      "Name=instance-state-name,Values=running" \
+    --query 'Reservations[0].Instances[0].InstanceId' \
+    --output text
+)"
+
+if [[ -z "$instance_id" || "$instance_id" == "None" ]]; then
+  echo "no running instance found in $asg_name" >&2
+  exit 1
+fi
+
+aws s3 cp "$artifact" "s3://$bucket/deployments/$release_id/image.tar.zst"
+aws s3 cp "$compose_file" "s3://$bucket/deployments/$release_id/compose.yaml"
+if [[ -n "$env_file" ]]; then
+  aws s3 cp "$env_file" "s3://$bucket/deployments/$release_id/runtime.env"
+fi
+
+availability_zone="$(aws ec2 describe-instances \
+  --region "$region" \
+  --instance-ids "$instance_id" \
+  --query 'Reservations[0].Instances[0].Placement.AvailabilityZone' \
+  --output text)"
+
+aws ec2-instance-connect send-ssh-public-key \
+  --region "$region" \
+  --instance-id "$instance_id" \
+  --availability-zone "$availability_zone" \
+  --instance-os-user ec2-user \
+  --ssh-public-key "file://$ssh_key.pub" >/dev/null
+
+proxy_command="aws ec2-instance-connect open-tunnel --region $region --instance-connect-endpoint-id $endpoint_id --instance-id %h"
+
+ssh \
+  -i "$ssh_key" \
+  -o "ProxyCommand=$proxy_command" \
+  -o StrictHostKeyChecking=accept-new \
+  "ec2-user@$instance_id" \
+  "sudo /usr/local/bin/activate-mammoth-release '$bucket' '$release_id'"
+
+echo "activated release $release_id on $instance_id"

@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device="${data_device_path}"
+fallback_device="${data_device_name}"
+mount_path="${data_mount_path}"
+
+for _ in $(seq 1 180); do
+  if [[ -e "$device" ]]; then
+    break
+  fi
+  if [[ -b "$fallback_device" ]]; then
+    device="$fallback_device"
+    break
+  fi
+  sleep 2
+done
+
+if [[ ! -e "$device" && ! -b "$device" ]]; then
+  echo "persistent EBS device did not appear" >&2
+  exit 1
+fi
+
+mkdir -p "$mount_path"
+
+if ! blkid "$device" >/dev/null 2>&1; then
+  mkfs.xfs -f "$device"
+fi
+
+uuid=$(blkid -s UUID -o value "$device")
+if ! grep -q "UUID=$uuid " /etc/fstab; then
+  echo "UUID=$uuid $mount_path xfs defaults,nofail 0 2" >>/etc/fstab
+fi
+mount "$mount_path"
+
+mkdir -p "$mount_path/current" "$mount_path/postgres" "$mount_path/mammoth" "$mount_path/backups"
+chown -R root:docker "$mount_path"
+chmod -R 0770 "$mount_path"
+
+cat >/etc/systemd/system/mammoth-compose.service <<UNIT
+[Unit]
+Description=Spherical Mammoth Docker Compose stack
+Requires=docker.service
+After=docker.service local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=$mount_path/current
+ExecStartPre=/usr/bin/test -f $mount_path/current/compose.yaml
+ExecStart=/usr/bin/docker compose -f $mount_path/current/compose.yaml up -d
+ExecStop=/usr/bin/docker compose -f $mount_path/current/compose.yaml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable mammoth-compose.service
+
+if [[ -f "$mount_path/current/compose.yaml" ]]; then
+  systemctl start mammoth-compose.service
+fi
