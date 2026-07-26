@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose --file deployment/compose/compose.yaml
 HELM_CHART := deployment/helm/spherical-mammoth
+TOFU_ROOTS := $(wildcard deployment/opentofu/*/)
 
 .PHONY: validate compose-config compose-up compose-down e2e-signup smoke-lifecycle helm-dependency-local helm-lint helm-template kind-create kind-delete kind-verify tofu-fmt tofu-validate packer-fmt packer-validate scaffold-check
 
@@ -30,20 +31,19 @@ helm-template: helm-dependency-local
 	helm template spherical-mammoth $(HELM_CHART) --values $(HELM_CHART)/values-kind.yaml >/dev/null
 
 tofu-fmt:
-	tofu -chdir=deployment/opentofu/aws fmt -check -recursive
-	tofu -chdir=deployment/opentofu/gcp fmt -check -recursive
-	tofu -chdir=deployment/opentofu/poorman-aws fmt -check -recursive
-	tofu -chdir=deployment/opentofu/poorman-k3s-aws fmt -check -recursive
+	@for root in $(TOFU_ROOTS); do \
+		if find "$$root" -maxdepth 1 -name '*.tf' -print -quit | grep -q .; then \
+			tofu -chdir="$$root" fmt -check -recursive; \
+		fi; \
+	done
 
 tofu-validate:
-	tofu -chdir=deployment/opentofu/aws init -backend=false
-	tofu -chdir=deployment/opentofu/aws validate
-	tofu -chdir=deployment/opentofu/gcp init -backend=false
-	tofu -chdir=deployment/opentofu/gcp validate
-	tofu -chdir=deployment/opentofu/poorman-aws init -backend=false
-	tofu -chdir=deployment/opentofu/poorman-aws validate
-	tofu -chdir=deployment/opentofu/poorman-k3s-aws init -backend=false
-	tofu -chdir=deployment/opentofu/poorman-k3s-aws validate
+	@for root in $(TOFU_ROOTS); do \
+		if find "$$root" -maxdepth 1 -name '*.tf' -print -quit | grep -q .; then \
+			tofu -chdir="$$root" init -backend=false; \
+			tofu -chdir="$$root" validate; \
+		fi; \
+	done
 
 packer-fmt:
 	packer fmt -check deployment/opentofu/poorman-aws/packer
