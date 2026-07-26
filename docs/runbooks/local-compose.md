@@ -17,6 +17,6 @@ Run the current lifecycle acceptance smoke:
 make smoke-lifecycle
 ```
 
-The smoke currently submits the Mammoth delivery envelope directly to the sink.
-The Mammoth service remains behind the `implemented` Compose profile until its
-version-specific destination and routing configuration is finalized.
+The smoke exercises the complete committed-event path through PostgreSQL
+logical replication, Mammoth routing, the transactional email sink, and
+Mailpit.

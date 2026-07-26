@@ -6,7 +6,6 @@ After starting the Compose stack, run:
 make smoke-lifecycle
 ```
 
-The scenario records a verification-requested projection and event, submits its
-delivery envelope twice, and verifies that Mailpit receives exactly one message.
-It exercises the producer and sink boundary directly while Mammoth route syntax
-is finalized.
+The scenario records a verification-requested projection and event, waits for
+Mammoth to capture and route the committed PostgreSQL row, and verifies that
+Mailpit receives exactly one message.

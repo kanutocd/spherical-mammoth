@@ -132,17 +132,16 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(content_length)
         if DELIVERY_SECRET:
             supplied = self.headers.get("X-Mammoth-Signature", "")
-            expected = hmac.new(DELIVERY_SECRET.encode(), body, hashlib.sha256).hexdigest()
+            timestamp = self.headers.get("X-Mammoth-Timestamp", "")
+            signed_payload = timestamp.encode() + b"." + body
+            expected = "sha256=" + hmac.new(
+                DELIVERY_SECRET.encode(), signed_payload, hashlib.sha256
+            ).hexdigest()
             if not hmac.compare_digest(supplied, expected):
                 self.respond(401, {"error": "invalid signature"})
                 return
         try:
-            envelope = json.loads(body)
-            delivery_id = required_string(envelope, "delivery_id")
-            attempt = envelope["attempt"]
-            if not isinstance(attempt, int) or attempt < 1:
-                raise ValueError("attempt must be a positive integer")
-            event = envelope["event"]
+            delivery_id, attempt, event = normalize_delivery(json.loads(body))
             event_id = required_string(event, "event_id")
             event_type = required_string(event, "event_type")
             recipient, subject, content = render(event)
@@ -180,6 +179,36 @@ def required_string(value, name):
     if not isinstance(result, str) or not result:
         raise ValueError(f"{name} must be a non-empty string")
     return result
+
+
+def normalize_delivery(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("delivery must be a JSON object")
+
+    if "delivery_id" in payload:
+        delivery_id = required_string(payload, "delivery_id")
+        attempt = payload["attempt"]
+        if not isinstance(attempt, int) or attempt < 1:
+            raise ValueError("attempt must be a positive integer")
+        return delivery_id, attempt, payload["event"]
+
+    delivery_id = required_string(payload, "event_id")
+    if payload.get("namespace") != "public" or payload.get("entity") != "domain_events":
+        raise ValueError("unsupported CDC relation")
+    if payload.get("operation") != "insert":
+        raise ValueError("unsupported CDC operation")
+
+    row = payload["data"]
+    semantic_data = row["data"]
+    if isinstance(semantic_data, str):
+        semantic_data = json.loads(semantic_data)
+    event = {
+        "event_id": required_string(row, "event_id"),
+        "event_type": required_string(row, "event_type"),
+        "occurred_at": row.get("occurred_at"),
+        "data": semantic_data,
+    }
+    return delivery_id, 1, event
 
 
 if __name__ == "__main__":

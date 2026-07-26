@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spherical-mammoth.local/contracts/delivery/mammoth-cdc-event.v1.schema.json",
+  "title": "Mammoth CDC Row Event v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "event_id",
+    "source",
+    "operation",
+    "namespace",
+    "entity",
+    "occurred_at",
+    "data",
+    "changes",
+    "metadata"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "operation": { "enum": ["insert", "update", "delete"] },
+    "namespace": { "type": "string", "minLength": 1 },
+    "entity": { "type": "string", "minLength": 1 },
+    "identity": { "type": ["object", "null"] },
+    "source_position": { "type": ["string", "integer", "null"] },
+    "transaction_id": { "type": ["string", "integer", "null"] },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "data": { "type": "object" },
+    "changes": { "type": "array" },
+    "metadata": { "type": "object" }
+  }
+}

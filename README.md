@@ -34,9 +34,9 @@ The verification-completed transition follows the same path and emits a welcome 
 ## Repository status
 
 Milestone 1 is in progress. The repository now includes the React identity UX,
-Go lifecycle bridge, transactional PostgreSQL projection/event writes, Python
-email sink, Mailpit integration, and an idempotency smoke scenario. Mammoth route
-configuration and a complete Kratos-to-Mammoth acceptance scenario remain.
+Go lifecycle bridge, transactional PostgreSQL projection/event writes, Mammoth
+source and email routing, the Python email sink, Mailpit integration, and a CDC
+smoke scenario. A complete browser-driven Kratos acceptance scenario remains.
 
 ## Repository map
 

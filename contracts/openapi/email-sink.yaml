@@ -16,16 +16,32 @@ paths:
   /v1/deliveries:
     post:
       summary: Accept a Mammoth event delivery
+      parameters:
+        - in: header
+          name: X-Mammoth-Timestamp
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Mammoth-Signature
+          required: true
+          schema:
+            type: string
+            pattern: '^sha256=[0-9a-f]{64}$'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: ../delivery/mammoth-http-delivery.v1.schema.json
+              oneOf:
+                - $ref: ../delivery/mammoth-cdc-event.v1.schema.json
+                - $ref: ../delivery/mammoth-http-delivery.v1.schema.json
       responses:
         '202':
           description: Delivery accepted or already completed idempotently
         '400':
           description: Invalid permanent payload
+        '401':
+          description: Missing or invalid Mammoth signature
         '503':
           description: Retryable provider or service failure

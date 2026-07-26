@@ -60,16 +60,41 @@ services:
       - "4434:4434"
     networks: [identity, data, application]
 
-  mammoth:
-    image: ghcr.io/kanutocd/mammoth:latest
-    profiles: [implemented]
-    command: ["start", "/etc/mammoth/mammoth.yml"]
+  mammoth-init:
+    image: ghcr.io/kanutocd/mammoth:v1.5.1
+    environment:
+      MAMMOTH_POSTGRES_PASSWORD: ${MAMMOTH_POSTGRES_PASSWORD:-development-only}
+      MAMMOTH_WEBHOOK_SIGNING_SECRET: ${MAMMOTH_WEBHOOK_SIGNING_SECRET:-development-only-signing-secret}
+    command: ["sh", "-c", "mammoth validate /config/mammoth.yml && mammoth bootstrap /config/mammoth.yml"]
     volumes:
-      - ../../platform/mammoth:/etc/mammoth:ro
-      - mammoth-data:/data
+      - ../../platform/mammoth/mammoth.yml:/config/mammoth.yml:ro
+      - mammoth-data:/app/.sqlite3
     depends_on:
       postgres:
         condition: service_healthy
+      email-sink:
+        condition: service_healthy
+    restart: "no"
+    networks: [data, application]
+
+  mammoth:
+    image: ghcr.io/kanutocd/mammoth:v1.5.1
+    environment:
+      MAMMOTH_POSTGRES_PASSWORD: ${MAMMOTH_POSTGRES_PASSWORD:-development-only}
+      MAMMOTH_WEBHOOK_SIGNING_SECRET: ${MAMMOTH_WEBHOOK_SIGNING_SECRET:-development-only-signing-secret}
+    command: ["start", "/config/mammoth.yml"]
+    volumes:
+      - ../../platform/mammoth/mammoth.yml:/config/mammoth.yml:ro
+      - mammoth-data:/app/.sqlite3
+    depends_on:
+      mammoth-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mammoth", "status", "/config/mammoth.yml"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks: [data, application]
 
   identity-lifecycle-bridge:
@@ -91,12 +116,18 @@ services:
       EMAIL_FROM_ADDRESS: no-reply@spherical-mammoth.test
       MAILPIT_SMTP_HOST: mailpit
       MAILPIT_SMTP_PORT: 1025
+      DELIVERY_SECRET: ${MAMMOTH_WEBHOOK_SIGNING_SECRET:-development-only-signing-secret}
     volumes:
       - email-sink-data:/data
     depends_on:
       - mailpit
     ports:
       - "8082:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks: [application]
 
   web:
