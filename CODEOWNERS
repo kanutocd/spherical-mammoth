@@ -1,0 +1,9 @@
+# Replace placeholder ownership with real GitHub teams when they exist.
+/apps/ @kanutocd
+/services/ @kanutocd
+/platform/mammoth/ @kanutocd
+/platform/kratos/ @kanutocd
+/platform/hydra/ @kanutocd
+/deployment/ @kanutocd
+/contracts/ @kanutocd
+/docs/security/ @kanutocd

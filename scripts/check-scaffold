@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required=(
+  README.md
+  docs/architecture/overview.md
+  contracts/events/identity.verification_requested.v1.schema.json
+  contracts/events/identity.signup_completed.v1.schema.json
+  contracts/delivery/mammoth-http-delivery.v1.schema.json
+  deployment/compose/compose.yaml
+  deployment/helm/spherical-mammoth/Chart.yaml
+  deployment/opentofu/aws/versions.tf
+)
+
+for path in "${required[@]}"; do
+  test -f "$path" || { echo "missing required file: $path" >&2; exit 1; }
+done
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+for path in Path('contracts').rglob('*.json'):
+    json.loads(path.read_text())
+print('scaffold validation passed')
+PY

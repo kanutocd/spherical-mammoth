@@ -8,6 +8,8 @@ coverage/
 tmp/
 log/
 node_modules/
+dist/
+*.tsbuildinfo
 vendor/bundle/
 .terraform/
 *.tfstate
@@ -15,3 +17,7 @@ vendor/bundle/
 crash.log
 *.pem
 *.key
+
+
+/.ignoreme/
+/.history/
