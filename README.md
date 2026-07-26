@@ -4,6 +4,26 @@
 
 The application is intentionally small but realistic: users can register through Ory Kratos, verify their email, complete signup, and receive transactional email. Business state is committed to PostgreSQL, captured by Mammoth, and delivered to independent polyglot sinks.
 
+## Deployment documentation
+
+Start here for the deliberately explicit, cloud-native OSS deployment guide:
+
+### [Deploy Mammoth on Kubernetes, AWS EKS, or GCP GKE](docs/runbooks/cloud-native-mammoth.md)
+
+It covers infrastructure provisioning with OpenTofu, PostgreSQL logical
+replication, secrets, Helm OCI installation, verification, upgrades, rollback,
+and teardown. For the fast local path, use the [kind verification runbook](docs/runbooks/local-kubernetes.md).
+
+```text
+                 one Helm chart
+                      │
+       ┌──────────────┼──────────────┐
+       │              │              │
+      kind          AWS EKS        GCP GKE
+       │              │              │
+   local test        RDS          Cloud SQL
+```
+
 ## Initial vertical slice
 
 ```text
