@@ -1,0 +1,21 @@
+postgres:
+  host: postgres
+  port: 5432
+  database: spherical_mammoth
+  username: mammoth
+  password_env: MAMMOTH_POSTGRES_PASSWORD
+
+replication:
+  slot: spherical_mammoth
+  publications:
+    - spherical_mammoth_publication
+  auto_create_slot: true
+  temporary_slot: false
+  feedback_interval: 2.0
+
+sqlite:
+  path: /data/mammoth.db
+
+# Destination and route syntax will be finalized against the Mammoth version
+# selected for Milestone 1. Keep semantic event filtering centered on the
+# application-owned domain_events table.

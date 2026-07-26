@@ -1,0 +1,25 @@
+{
+  "$id": "https://spherical-mammoth.local/identity.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Spherical Mammoth Identity",
+  "type": "object",
+  "properties": {
+    "traits": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "ory.sh/kratos": {
+            "credentials": { "password": { "identifier": true } },
+            "verification": { "via": "email" },
+            "recovery": { "via": "email" }
+          }
+        },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 120 }
+      },
+      "required": ["email", "display_name"],
+      "additionalProperties": false
+    }
+  }
+}
