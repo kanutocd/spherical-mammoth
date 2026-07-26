@@ -10,6 +10,7 @@ serve:
       allow_credentials: true
       allowed_origins:
         - http://localhost:3000
+        - http://localhost:13000
       allowed_methods:
         - GET
         - POST
@@ -26,6 +27,7 @@ selfservice:
   default_browser_return_url: http://localhost:3000/
   allowed_return_urls:
     - http://localhost:3000
+    - http://localhost:13000
   methods:
     password:
       enabled: true

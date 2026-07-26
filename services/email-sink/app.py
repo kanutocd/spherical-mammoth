@@ -89,6 +89,11 @@ def render(event):
     display_name = data.get("display_name") or "there"
     event_type = event["event_type"]
     if event_type == "identity.verification_requested":
+        # FIXME: This Milestone 1 email intentionally demonstrates the
+        # PostgreSQL -> Mammoth -> sink delivery path, but it duplicates the
+        # verification email sent by Kratos. In production, Kratos should be
+        # the sole owner of the actionable verification email; retain this
+        # event for audit/projections without sending a second email.
         subject = "Verify your Spherical Mammoth account"
         verification_url = data.get("verification_url")
         action = f"\n\nContinue verification: {verification_url}" if verification_url else ""

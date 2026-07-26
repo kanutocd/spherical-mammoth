@@ -53,9 +53,10 @@ function App() {
 
   async function register(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setBusy(true);
     setNotice(null);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const email = String(form.get("email") ?? "");
     const displayName = String(form.get("display_name") ?? "");
     const password = String(form.get("password") ?? "");
@@ -90,7 +91,7 @@ function App() {
         kind: "success",
         message: "Account created. Kratos sent a verification code to Mailpit.",
       });
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       if (error instanceof FlowError) {
         setRegistrationFlow(error.flow);
@@ -103,6 +104,7 @@ function App() {
 
   async function verify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     if (!verificationFlow || !identity) {
       setNotice({ kind: "error", message: "Register an account before entering a verification code." });
       return;
@@ -110,7 +112,7 @@ function App() {
 
     setBusy(true);
     setNotice(null);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const code = String(form.get("code") ?? "");
 
     try {
@@ -130,7 +132,7 @@ function App() {
         display_name: identity.traits.display_name ?? null,
       });
       setNotice({ kind: "success", message: "Email verified. Welcome aboard." });
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       if (error instanceof FlowError) {
         setVerificationFlow(error.flow);
@@ -164,6 +166,13 @@ function App() {
   return (
     <main>
       <header>
+        <img
+          className="brand-logo"
+          src="/branding/mammoth-primary-horizontal-light.png"
+          alt="Mammoth — PostgreSQL CDC Data Plane"
+          width="1700"
+          height="500"
+        />
         <span className="eyebrow">Mammoth data plane reference SaaS</span>
         <h1>Small signup.<br />Serious delivery.</h1>
         <p className="lede">
