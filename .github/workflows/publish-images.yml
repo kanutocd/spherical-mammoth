@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to publish (for example, v1.5.3)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -12,6 +18,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag || github.ref_name }}
     strategy:
       matrix:
         include:
@@ -23,6 +31,9 @@ jobs:
             context: apps/web
     steps:
       - uses: actions/checkout@v4
+      - name: Validate image tag
+        shell: bash
+        run: test "${IMAGE_TAG}" != "" && [[ "${IMAGE_TAG}" == v* ]]
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -34,5 +45,5 @@ jobs:
           context: ${{ matrix.context }}
           push: true
           tags: |
-            ghcr.io/kanutocd/spherical-mammoth-${{ matrix.name }}:${{ github.ref_name }}
+            ghcr.io/kanutocd/spherical-mammoth-${{ matrix.name }}:${{ env.IMAGE_TAG }}
             ghcr.io/kanutocd/spherical-mammoth-${{ matrix.name }}:latest
