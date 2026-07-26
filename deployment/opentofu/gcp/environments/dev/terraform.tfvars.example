@@ -1,0 +1,15 @@
+project_id  = "replace-me"
+region      = "asia-southeast1"
+environment = "dev"
+
+master_authorized_networks = [{
+  cidr_block   = "203.0.113.10/32"
+  display_name = "operator"
+}]
+
+node_machine_type           = "e2-standard-2"
+node_spot                   = true
+node_min_count              = 1
+node_max_count              = 4
+postgres_tier               = "db-custom-1-3840"
+postgres_availability_type  = "ZONAL"

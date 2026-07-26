@@ -1,0 +1,17 @@
+project_id  = "replace-me"
+region      = "asia-southeast1"
+environment = "staging"
+
+master_authorized_networks = [{
+  cidr_block   = "203.0.113.10/32"
+  display_name = "operator"
+}]
+
+gke_deletion_protection       = true
+node_machine_type             = "e2-standard-4"
+node_spot                     = false
+node_min_count                = 2
+node_max_count                = 8
+postgres_tier                 = "db-custom-2-7680"
+postgres_availability_type    = "REGIONAL"
+postgres_deletion_protection  = true
