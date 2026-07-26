@@ -20,7 +20,8 @@ jobs:
       - name: Verify tag matches chart version
         shell: bash
         run: |
-          chart_version="$(helm show chart deployment/helm/spherical-mammoth | awk '$1 == "version:" { print $2 }')"
+          chart_version="$(awk '$1 == "version:" { print $2; exit }' deployment/helm/spherical-mammoth/Chart.yaml)"
+          test -n "${chart_version}"
           test "${GITHUB_REF_NAME}" = "chart-v${chart_version}"
       - name: Resolve dependencies
         run: helm dependency build deployment/helm/spherical-mammoth
