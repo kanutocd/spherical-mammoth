@@ -18,12 +18,18 @@ h2 { margin: 0 0 8px; font-family: Georgia, serif; font-size: 2rem; font-weight:
 label { display: grid; gap: 8px; color: #50655c; font-size: .86rem; font-weight: 700; }
 input { width: 100%; border: 1px solid #adb6ad; border-radius: 2px; padding: 13px 14px; background: white; color: #173027; font: inherit; }
 input:focus { outline: 3px solid #d9e5b8; border-color: #365e4e; }
+input[aria-invalid="true"] { border-color: #bc3b2d; }
 button { margin-top: 8px; border: 0; border-radius: 2px; padding: 14px 20px; background: #173027; color: white; font: inherit; font-weight: 800; cursor: pointer; }
 button:hover { background: #285040; }
 button:disabled { cursor: wait; opacity: .6; }
+button.secondary { margin-top: -8px; border: 1px solid #adb6ad; background: transparent; color: #173027; }
+button.secondary:hover { background: #edf0e7; }
 .notice { padding: 14px 18px; border-left: 4px solid; background: #faf9f4; }
 .notice.success { border-color: #40785d; }
 .notice.error { border-color: #bc3b2d; color: #81281f; }
+.flow-context, .flow-message { margin: 0; color: #65756d; font-size: .9rem; line-height: 1.5; }
+.flow-message, .field-error { color: #9b3025; }
+.field-error { font-size: .8rem; font-weight: 600; }
 footer { margin-top: 28px; color: #65756d; font-size: .9rem; }
 a { color: inherit; }
 @media (max-width: 720px) {

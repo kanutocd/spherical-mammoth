@@ -11,7 +11,7 @@
 ## Milestone 1 — Signup verification vertical slice
 
 - [x] React signup and verification UX;
-- [ ] Kratos browser registration and verification flow;
+- [x] Kratos browser registration and verification flow;
 - [x] Go identity lifecycle bridge;
 - [x] application-owned signup projection and semantic events;
 - [ ] Mammoth source and route configuration;

@@ -34,18 +34,31 @@ services:
       - mailpit-data:/data
     networks: [application]
 
-  kratos:
+  kratos-migrate:
     image: oryd/kratos:v1.3.1
-    command: serve --config /etc/config/kratos/kratos.yml --dev
+    command: migrate sql -e --yes --config /etc/config/kratos/kratos.yml
     volumes:
       - ../../platform/kratos:/etc/config/kratos:ro
     depends_on:
       postgres:
         condition: service_healthy
+    restart: on-failure
+    networks: [data]
+
+  kratos:
+    image: oryd/kratos:v1.3.1
+    command: serve --config /etc/config/kratos/kratos.yml --dev --watch-courier
+    volumes:
+      - ../../platform/kratos:/etc/config/kratos:ro
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     ports:
       - "4433:4433"
       - "4434:4434"
-    networks: [identity, data]
+    networks: [identity, data, application]
 
   mammoth:
     image: ghcr.io/kanutocd/mammoth:latest
