@@ -11,13 +11,14 @@ is required.
 - kind
 - kubectl
 - Helm 3
-- network access to `ghcr.io`
+- network access to GHCR and Docker Hub
 - the `spherical-mammoth:0.1.1` chart and `v1.5.3` application images published to GHCR
 
 ## Set the release variables
 
 The umbrella chart is published as `spherical-mammoth`. Set the release and
-chart versions explicitly so the verification is reproducible:
+chart versions explicitly so the installation uses the intended published
+chart:
 
 ```bash
 export HELM_RELEASE=spherical-mammoth
@@ -33,6 +34,10 @@ incorrectly tagged OCI release immediately:
 helm show chart "$CHART_REF" --version "$SPHERICAL_MAMMOTH_CHART_VERSION"
 ```
 
+The chart pins the first-party application images at `v1.5.3`. Its bundled
+third-party development images are not a complete image lock, so record their
+resolved digests if you need a fully repeatable local environment.
+
 ## Create a disposable cluster
 
 ```bash
@@ -47,9 +52,9 @@ kubectl config use-context kind-spherical-mammoth
 kubectl cluster-info
 ```
 
-For a deterministic local run, preload the published application images into
-the kind node. Images in the host Docker cache are not automatically visible to
-kind:
+To avoid pulling the three published application images from GHCR during the
+install, preload them into the kind node. Images in the host Docker cache are
+not automatically visible to kind:
 
 ```bash
 export APP_IMAGE_TAG=v1.5.3
@@ -63,7 +68,9 @@ do
 done
 ```
 
-If you skip this step, the kind node must pull the images directly from GHCR.
+If you skip this step, the kind node pulls those images directly from GHCR. The
+chart also pulls Mammoth from GHCR and PostgreSQL, Kratos, and Mailpit from
+Docker Hub; those images are not covered by this optional preload.
 
 ## Install the published chart
 
@@ -105,20 +112,40 @@ The release includes these services:
 Forward them from the cluster for a browser smoke check:
 
 ```bash
-kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-web" 18080:80
-kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-kratos" 14433:4433
-kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-mailpit" 18025:8025
+kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-web" 8080:80
+kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-kratos" 4433:4433
+kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-identity-lifecycle-bridge" 8081:8080
+kubectl -n "$HELM_NAMESPACE" port-forward service/"$HELM_RELEASE-mailpit" 8025:8025
 ```
 
-Open `http://localhost:18080` for the web UI and `http://localhost:18025` for
+Open `http://localhost:8080` for the web UI and `http://localhost:8025` for
 Mailpit. Run each port-forward in its own terminal; stop them with `Ctrl-C`.
+All four forwards are required for the signup flow: the published web image
+calls Kratos at `http://localhost:4433` and the lifecycle bridge at
+`http://localhost:8081`.
 
-The lifecycle bridge can be checked directly at `http://localhost:18081` with:
+The lifecycle bridge can be checked directly at `http://localhost:8081` with:
 
 ```bash
 kubectl -n "$HELM_NAMESPACE" port-forward \
-  service/"$HELM_RELEASE-identity-lifecycle-bridge" 18081:8080
+  service/"$HELM_RELEASE-identity-lifecycle-bridge" 8081:8080
 ```
+
+### Troubleshoot signup
+
+Before opening the web UI, confirm the two browser-facing APIs are reachable
+from the same host as the browser:
+
+```bash
+curl --fail http://localhost:4433/health/ready
+curl --fail http://localhost:8081/health/ready
+```
+
+If registration reports a connection error, check that the Kratos port-forward
+is still running and that it maps local port `4433` (not `4434`, the Kratos
+admin API) to service port `4433`. A browser opened at `http://127.0.0.1:8080`
+is also supported; use one host consistently for the web UI and its forwarded
+services.
 
 ## Pull or render without installing
 

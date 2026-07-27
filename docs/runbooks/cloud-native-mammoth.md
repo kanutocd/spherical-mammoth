@@ -45,7 +45,6 @@ Pin every release input. Do not use `latest` for a production change.
 
 ```bash
 export MAMMOTH_CHART_VERSION=1.5.3
-export MAMMOTH_IMAGE_TAG=1.5.3
 export MAMMOTH_RELEASE=mammoth
 export MAMMOTH_NAMESPACE=mammoth
 ```
@@ -64,8 +63,9 @@ helm show chart \
   --version "$MAMMOTH_CHART_VERSION"
 ```
 
-The chart `version`, `appVersion`, and image tag should match the release
-record. Keep the rendered manifest from each deployment review.
+The chart version and `appVersion` should match the release record. Record the
+image tag separately; the published image uses the `v1.5.3` tag. Keep the
+rendered manifest from each deployment review.
 
 ## Operator prerequisites
 
@@ -195,7 +195,7 @@ are shown below:
 ```yaml
 image:
   repository: ghcr.io/kanutocd/mammoth
-  tag: "1.5.3"
+  tag: "v1.5.3"
   pullPolicy: IfNotPresent
 
 mammoth:

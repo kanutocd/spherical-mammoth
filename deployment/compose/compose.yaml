@@ -101,7 +101,7 @@ services:
     build: ../../services/identity-lifecycle-bridge
     environment:
       DATABASE_URL: postgres://spherical_mammoth:spherical_mammoth@postgres:5432/spherical_mammoth
-      CORS_ALLOWED_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      CORS_ALLOWED_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000,http://localhost:13000,http://localhost:8080,http://127.0.0.1:8080}
     depends_on:
       postgres:
         condition: service_healthy

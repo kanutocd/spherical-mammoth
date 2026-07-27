@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -52,7 +53,11 @@ func main() {
 
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", envOr("CORS_ALLOWED_ORIGIN", "http://localhost:3000"))
+		origin := r.Header.Get("Origin")
+		if origin != "" && allowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Add("Vary", "Origin")
+		}
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		if r.Method == http.MethodOptions {
@@ -61,6 +66,16 @@ func cors(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func allowedOrigin(origin string) bool {
+	configured := envOr("CORS_ALLOWED_ORIGIN", "http://localhost:3000")
+	for _, candidate := range strings.Split(configured, ",") {
+		if strings.TrimSpace(candidate) == origin {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *server) verificationRequested(w http.ResponseWriter, r *http.Request) {

@@ -2,8 +2,13 @@ import { StrictMode, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
-const KRATOS_URL = import.meta.env.VITE_KRATOS_PUBLIC_URL ?? "http://localhost:4433";
-const BRIDGE_URL = import.meta.env.VITE_BRIDGE_URL ?? "http://localhost:8081";
+const browserHost = typeof window === "undefined" ? "localhost" : window.location.hostname;
+const KRATOS_URL = normalizeLocalServiceUrl(
+  import.meta.env.VITE_KRATOS_PUBLIC_URL ?? `http://${browserHost}:4433`,
+);
+const BRIDGE_URL = normalizeLocalServiceUrl(
+  import.meta.env.VITE_BRIDGE_URL ?? `http://${browserHost}:8081`,
+);
 
 type Notice = { kind: "success" | "error"; message: string };
 type FlowKind = "registration" | "verification";
@@ -264,13 +269,25 @@ async function getBrowserFlow(kind: FlowKind, id: string): Promise<KratosFlow> {
 }
 
 async function submitBrowserFlow<T>(flow: KratosFlow, body: object): Promise<T> {
-  const response = await fetch(flow.ui.action, {
+  const response = await fetch(normalizeKratosUrl(flow.ui.action), {
     method: flow.ui.method,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "include",
     body: JSON.stringify(body),
   });
   return parseKratosResponse<T>(response);
+}
+
+function normalizeKratosUrl(action: string) {
+  return normalizeLocalServiceUrl(action);
+}
+
+function normalizeLocalServiceUrl(value: string) {
+  const url = new URL(value);
+  if (typeof window !== "undefined" && (url.hostname === "localhost" || url.hostname === "127.0.0.1")) {
+    url.hostname = window.location.hostname;
+  }
+  return url.toString().replace(/\/$/, "");
 }
 
 async function parseKratosResponse<T>(response: Response): Promise<T> {
