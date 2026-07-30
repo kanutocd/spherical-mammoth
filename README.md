@@ -1,6 +1,6 @@
 # Spherical Mammoth
 
-**Spherical Mammoth** is a production-shaped, cloud-native reference SaaS used to demonstrate, validate, benchmark, and eventually operate the Mammoth PostgreSQL CDC data plane.
+**Spherical Mammoth** is a production-shaped, cloud-native reference SaaS used to demonstrate, validate, benchmark, and eventually operate the [Mammoth PostgreSQL CDC data plane.](https://github.com/kanutocd/mammoth)
 
 The application is intentionally small but realistic: users can register through Ory Kratos, verify their email, complete signup, and receive transactional email. Business state is committed to PostgreSQL, captured by Mammoth, and delivered to independent polyglot sinks.
 
